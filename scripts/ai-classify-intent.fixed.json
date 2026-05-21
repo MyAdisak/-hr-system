@@ -1,0 +1,138 @@
+{
+  "name": "AI - Classify Intent (Haiku)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "user_msg",
+              "value": "={{ $json.user_msg }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "user_id",
+              "value": "={{ $json.user_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-1",
+      "name": "Filter Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 256,\n  \"system\": \"You classify Thai HR LINE messages. Return ONLY JSON: {\\\"intent\\\":one of [check_in, check_out, leave_request, salary_inquiry, ot_request, register, help, unknown], \\\"confidence\\\": 0-1, \\\"slots\\\": object}. No prose, no markdown.\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": {{ JSON.stringify($json.user_msg) }} }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "http-1",
+      "name": "Anthropic Haiku - Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch (e) { parsed = { intent: 'unknown', confidence: 0, slots: {}, _raw: raw }; }\nreturn [{ json: parsed }];"
+      },
+      "id": "code-1",
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Filter Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Payload": {
+      "main": [
+        [
+          {
+            "node": "Anthropic Haiku - Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Haiku - Classify": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

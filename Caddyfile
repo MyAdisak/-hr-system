@@ -1,0 +1,35 @@
+{
+    auto_https off
+}
+
+:80 {
+    @hr host hr.jodbot.com
+    handle @hr {
+        reverse_proxy hr_n8n:5678
+    }
+
+    @n8n host n8n.jodbot.com
+    handle @n8n {
+        reverse_proxy hr_n8n:5678
+    }
+
+    @pgadmin host pgadmin.jodbot.com
+    handle @pgadmin {
+        reverse_proxy pgadmin:80
+    }
+
+    @mcp host mcp.jodbot.com
+    handle @mcp {
+        reverse_proxy hr_n8n_mcp:3000
+    }
+
+    @app host app.jodbot.com
+    handle @app {
+        reverse_proxy hr_web:80
+    }
+
+    @root host jodbot.com
+    handle @root {
+        reverse_proxy hr_web:80
+    }
+}

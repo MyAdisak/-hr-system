@@ -1,0 +1,14 @@
+.env
+.env.bak*
+backups/
+caddy/data/
+caddy/config/
+hr-web/node_modules/
+hr-web/dist/
+hr-web2/
+hr-web-backup*/
+*.log
+.build.log
+.DS_Store
+*.bak*
+tailscale/

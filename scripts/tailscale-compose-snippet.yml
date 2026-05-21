@@ -1,0 +1,44 @@
+# Tailscale prep — add this service block to /opt/hr-system/docker-compose.yml
+# Activation steps:
+#   1. สร้าง auth key: https://login.tailscale.com/admin/settings/keys
+#      - Reusable: NO  (one-shot)
+#      - Pre-approved: YES
+#      - Tags: tag:server
+#   2. ใส่ใน .env: TS_AUTHKEY=tskey-auth-xxxxxxxxxxxx
+#   3. docker compose up -d tailscale
+#   4. รอ ~30 วิ → ssh hr-vps 'docker exec hr_tailscale tailscale status' เพื่อรับ tailnet IP
+#   5. expose MCP ผ่าน tailnet:
+#      ssh hr-vps 'docker exec hr_tailscale tailscale serve --bg --https=443 \
+#        --set-path=/mcp http://127.0.0.1:3000/mcp'
+#   6. ลบ port mapping `127.0.0.1:3000:3000` ของ n8n-mcp ออก (ปิด localhost expose ก็ได้
+#      เพราะใช้ผ่าน tailnet แทน)
+
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: hr_tailscale
+    hostname: hr-vps-mcp
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_HOSTNAME=hr-vps-mcp
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_EXTRA_ARGS=--advertise-tags=tag:server --accept-dns=false
+    volumes:
+      - ./tailscale/state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+# After activation, iPad/external access pattern:
+#   - Install Tailscale app on iPad, sign in same tailnet
+#   - Use https://hr-vps-mcp.<your-tailnet>.ts.net/mcp
+#   - In Claude Code config: replace http://localhost:3000/mcp with tailnet URL
+#   - No SSH tunnel needed
